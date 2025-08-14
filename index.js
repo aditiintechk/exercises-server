@@ -64,17 +64,20 @@ app.put('/api/persons/:id', (req, res, next) => {
 	})
 })
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
 	const body = req.body
 	if (!body) {
-		return res.status(404).send('send appropriate information')
+		return res.status(400).send('send appropriate information')
 	}
 
 	const newContact = new Contact({
 		name: body.name,
 		number: body.number,
 	})
-	newContact.save().then((savedContact) => res.json(savedContact))
+	newContact
+		.save()
+		.then((savedContact) => res.json(savedContact))
+		.catch((error) => next(error))
 })
 
 const requestLogger = morgan((tokens, req, res) => {
@@ -95,10 +98,14 @@ const errorHandler = (error, req, res, next) => {
 	console.error(error.message)
 	if (error.name === 'CastError') {
 		return res.status(400).send({ error: 'malformatted id' })
+	} else if (error.name === 'ValidationError') {
+		return res.status(400).send({ error: error.message })
 	}
 
 	next(error)
 }
+
+app.use(errorHandler)
 
 app.listen(PORT, () => {
 	console.log('server running on port ', PORT)
