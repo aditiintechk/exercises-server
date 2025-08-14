@@ -1,6 +1,9 @@
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
+require('dotenv').config()
+const Contact = require('./models/contacts.js')
+
 const PORT = process.env.PORT || 3001
 
 const app = express()
@@ -51,11 +54,15 @@ app.get('/', (req, res) => {
 })
 
 app.get('/api/persons', (req, res) => {
-	res.json(phonebook)
+	Contact.find({}).then((contacts) => {
+		res.json(contacts)
+	})
 })
 
+// todo: get count to show info
 app.get('/info', (req, res) => {
 	const contactCount = phonebook.length
+	console.log('contact length', contactCount)
 	const currentDate = new Date()
 
 	res.send(
@@ -65,10 +72,7 @@ app.get('/info', (req, res) => {
 
 app.get('/api/persons/:id', (req, res) => {
 	const id = req.params.id
-	const currentPerson = phonebook.find((person) => person.id === id)
-
-	if (!currentPerson) res.status(404).send('not found')
-	else res.json(currentPerson)
+	Contact.findById(id).then((contact) => res.json(contact))
 })
 
 app.delete('/api/persons/:id', (req, res) => {
@@ -80,25 +84,21 @@ app.delete('/api/persons/:id', (req, res) => {
 
 app.post('/api/persons', (req, res) => {
 	const body = req.body
-	const newId = Math.floor(Math.random() * 10000)
 	if (!body) {
 		return res.status(404).send('send appropriate information')
 	}
-	const nameExists = phonebook.filter(
-		(person) => person.name === req.body.name
-	)
-	if (nameExists.length > 0) {
-		return res.status(404).send('name must be unique')
-	}
 
-	const newPerson = {
-		id: newId,
+	/* 	Contact.findOne({ name: body.name }).then((result) => {
+		if (result) {
+			return res.status(404).send('name must be unique')
+		}
+	}) */
+
+	const newContact = new Contact({
 		name: body.name,
 		number: body.number,
-	}
-
-	phonebook.push(newPerson)
-	res.status(200).json(newPerson)
+	})
+	newContact.save().then((savedContact) => res.json(savedContact))
 })
 
 app.listen(PORT, () => {
